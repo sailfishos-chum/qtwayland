@@ -46,6 +46,9 @@ Requires: opt-qt5-qtbase-devel%{?_isa}
 
 
 %build
+export QTDIR=%{_opt_qt5_prefix}
+touch .git
+
 %{opt_qmake_qt5}
 
 %make_build
