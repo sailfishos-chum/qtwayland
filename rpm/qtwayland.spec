@@ -1,111 +1,102 @@
-%define _prefix /opt/qt5/
-%define qmake5 %{_prefix}/%{_lib}/qt5/bin/qmake
+%global qt_version 5.15.8
 
-Name:       qt5-lgpl-qtwayland-wayland_egl
-Summary:    Qt Wayland compositor, wayland_egl variant
-Version:    5.15.8
-Release:    1%{?dist}
-License:    LGPLv2 with exception or GPLv3 or Qt Commercial
-URL:        https://www.qt.io/
-Source0:    %{name}-%{version}.tar.bz2
-BuildRequires:  qt5-qmake >= 5.6.3
-BuildRequires:  qt5-lgpl-qtcore-devel >= 5.15.8
-BuildRequires:  qt5-lgpl-qtgui-devel >= 5.15.8
-BuildRequires:  qt5-lgpl-qtplatformsupport-devel >= 5.15.8
-BuildRequires:  qt5-lgpl-qtdeclarative-devel >= 5.15.8
-BuildRequires:  qt5-lgpl-qtdbus-devel >= 5.15.8
-BuildRequires:  pkgconfig(wayland-server) >= 1.2.0
-BuildRequires:  pkgconfig(wayland-client) >= 1.2.0
+Summary: Qt5 - Wayland platform support and QtCompositor module
+Name: opt-qt5-qtwayland
+Version: 5.15.8
+Release: 1%{?dist}
+
+License: LGPLv3
+Url:     http://www.qt.io
+%global majmin %(echo %{version} | cut -d. -f1-2)
+Source0: %{name}-%{version}.tar.bz2
+
+# filter qml provides
+%global __provides_exclude_from ^%{_opt_qt5_archdatadir}/qml/.*\\.so$
+
+BuildRequires: make
+BuildRequires: opt-qt5-qtbase-devel >= %{qt_version}
+BuildRequires: opt-qt5-qtbase-static
+BuildRequires: opt-qt5-qtbase-private-devel
+%{?_qt5:Requires: %{_qt5}%{?_isa} = %{_qt5_version}}
+BuildRequires: opt-qt5-qtdeclarative-devel
+
+BuildRequires:  pkgconfig(xkbcommon)
+BuildRequires:  pkgconfig(wayland-scanner)
+BuildRequires:  pkgconfig(wayland-server)
+BuildRequires:  pkgconfig(wayland-client)
+BuildRequires:  pkgconfig(wayland-cursor)
 BuildRequires:  pkgconfig(wayland-egl)
-BuildRequires:  libxkbcommon-devel
-BuildRequires:  pkgconfig(glib-2.0)
-BuildRequires:  libffi-devel
-BuildRequires:  fdupes
-Requires:       xkeyboard-config
+BuildRequires:  pkgconfig(egl)
+BuildRequires:  pkgconfig(glesv2)
+BuildRequires:  pkgconfig(libudev)
 
 %description
-Qt is a cross-platform application and UI framework. Using Qt, you can
-write web-enabled applications once and deploy them across desktop,
-mobile and embedded systems without rewriting the source code.
-.
-This package contains the Qt wayland compositor for wayland_egl
+%{summary}.
 
 %package devel
-Summary:        Qt Wayland compositor - development files for wayland_egl
-Requires:       %{name} = %{version}-%{release}
-
+Summary: Development files for %{name}
+Requires: %{name}%{?_isa} = %{version}-%{release}
+Requires: opt-qt5-qtbase-devel%{?_isa}
 %description devel
-Qt is a cross-platform application and UI framework. Using Qt, you can
-write web-enabled applications once and deploy them across desktop,
-mobile and embedded systems without rewriting the source code.
-.
-This package contains the Qt wayland compositor development files for wayland_egl
+%{summary}.
+
 
 %prep
 %autosetup -n %{name}-%{version}/upstream
 
+
 %build
-export QTDIR=%{_prefix}
-export QT_WAYLAND_GL_CONFIG=wayland_egl
+export QTDIR=%{_opt_qt5_prefix}
 touch .git
-%qmake5 "CONFIG += wayland-compositor"
+
+%{opt_qmake_qt5}
 
 %make_build
 
+
 %install
-%qmake_install
+make install INSTALL_ROOT=%{buildroot}
 
-rm %{buildroot}%{_libdir}/cmake/Qt5Gui/Qt5Gui_.cmake
+## .prl/.la file love
+# nuke .prl reference(s) to %%buildroot, excessive (.la-like) libs
+pushd %{buildroot}%{_opt_qt5_libdir}
+for prl_file in libQt5*.prl ; do
+  sed -i -e "/^QMAKE_PRL_BUILD_DIR/d" ${prl_file}
+  if [ -f "$(basename ${prl_file} .prl).so" ]; then
+    rm -fv "$(basename ${prl_file} .prl).la"
+    sed -i -e "/^QMAKE_PRL_LIBS/d" ${prl_file}
+  fi
+done
+popd
 
-# Fix wrong path in pkgconfig files
-find %{buildroot}%{_libdir}/pkgconfig -type f -name '*.pc' \
--exec perl -pi -e "s, -L%{_builddir}/?\S+,,g" {} \;
-# Fix wrong path in prl files
-find %{buildroot}%{_libdir} -type f -name '*.prl' \
--exec sed -i -e "/^QMAKE_PRL_BUILD_DIR/d;s/\(QMAKE_PRL_LIBS =\).*/\1/" {} \;
-
-# We don't need qt5/Qt/
-rm -rf %{buildroot}/%{_includedir}/qt5/Qt
-rm -f %{buildroot}/%{_libdir}/qt5/plugins/wayland-graphics-integration-server/liblibhybris-egl-server.so
-rm -f %{buildroot}/%{_libdir}/qt5/plugins/wayland-graphics-integration-client/liblibhybris-egl-server.so
-rm -r %{buildroot}/%{_libdir}/qt5/plugins/wayland-decoration-client/libbradient.so
-
-%fdupes %{buildroot}/%{_includedir}
 
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
 
 %files
-%defattr(-,root,root,-)
-%license LICENSE.LGPL* LGPL_EXCEPTION.txt
-%license LICENSE.GPL* LICENSE.FDL
-%{_libdir}/libQt5Compositor.so.5
-%{_libdir}/libQt5Compositor.so.5.*
-%{_libdir}/libQt5WaylandClient.so.5
-%{_libdir}/libQt5WaylandClient.so.5.*
-%{_libdir}/qt5/plugins/platforms/libqwayland-generic.so
-%{_libdir}/qt5/plugins/wayland-graphics-integration-client/libdrm-egl-server.so
-%{_libdir}/qt5/plugins/wayland-graphics-integration-server/libdrm-egl-server.so
-%{_libdir}/qt5/plugins/platforms/libqwayland-egl.so
-%{_libdir}/qt5/plugins/wayland-graphics-integration-client/libwayland-egl.so
-%{_libdir}/qt5/plugins/wayland-graphics-integration-server/libwayland-egl.so
+%doc README
+%license LICENSE.*
+%{_opt_qt5_libdir}/libQt5WaylandCompositor.so.5*
+%{_opt_qt5_libdir}/libQt5WaylandClient.so.5*
+%{_opt_qt5_plugindir}/wayland-decoration-client/
+%{_opt_qt5_plugindir}/wayland-graphics-integration-server
+%{_opt_qt5_plugindir}/wayland-graphics-integration-client
+%{_opt_qt5_plugindir}/wayland-shell-integration
+%{_opt_qt5_plugindir}/platforms/libqwayland-egl.so
+%{_opt_qt5_plugindir}/platforms/libqwayland-generic.so
+%{_opt_qt5_qmldir}/QtWayland/
 
 %files devel
-%defattr(-,root,root,-)
-%{_libdir}/libQt5Compositor.so
-%{_includedir}/qt5/*
-%{_libdir}/libQt5Compositor.la
-%{_libdir}/libQt5Compositor.prl
-%{_libdir}/pkgconfig/Qt5Compositor.pc
-%{_libdir}/cmake/Qt5Compositor/*
-%{_datadir}/qt5/mkspecs/modules/qt_lib_waylandclient.pri
-%{_datadir}/qt5/mkspecs/modules/qt_lib_waylandclient_private.pri
-%{_datadir}/qt5/mkspecs/modules/qt_lib_compositor.pri
-%{_datadir}/qt5/mkspecs/modules/qt_lib_compositor_private.pri
-%{_libdir}/libQt5WaylandClient.so
-%{_libdir}/libQt5WaylandClient.la
-%{_libdir}/libQt5WaylandClient.prl
-%{_libdir}/pkgconfig/Qt5WaylandClient.pc
-%{_libdir}/cmake/Qt5WaylandClient/*
-%{_libdir}/qt5/bin/qtwaylandscanner
-
+%{_opt_qt5_bindir}/qtwaylandscanner
+%{_opt_qt5_headerdir}/QtWaylandCompositor/
+%{_opt_qt5_headerdir}/QtWaylandClient/
+%{_opt_qt5_libdir}/libQt5WaylandCompositor.so
+%{_opt_qt5_libdir}/libQt5WaylandClient.so
+%{_opt_qt5_libdir}/libQt5WaylandCompositor.prl
+%{_opt_qt5_libdir}/libQt5WaylandClient.prl
+%{_opt_qt5_libdir}/cmake/Qt5WaylandCompositor/Qt5WaylandCompositorConfig*.cmake
+%{_opt_qt5_libdir}/pkgconfig/*.pc
+%{_opt_qt5_archdatadir}/mkspecs/modules/*.pri
+%{_opt_qt5_libdir}/cmake/Qt5WaylandCompositor/
+%{_opt_qt5_libdir}/cmake/Qt5Gui/Qt5Gui_*.cmake
+%{_opt_qt5_libdir}/cmake/Qt5WaylandClient/
