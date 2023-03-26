@@ -40,6 +40,7 @@ Requires: opt-qt5-qtdeclarative >= %{qt_version}
 
 %package devel
 Summary: Development files for %{name}
+%{?opt_qt5_default_filter}
 Requires: %{name}%{?_isa} = %{version}-%{release}
 Requires: opt-qt5-qtbase-devel%{?_isa}
 %description devel
