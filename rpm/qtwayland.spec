@@ -13,6 +13,8 @@ Source0: %{name}-%{version}.tar.bz2
 # filter qml provides
 %global __provides_exclude_from ^%{_opt_qt5_archdatadir}/qml/.*\\.so$
 
+%{?opt_qt5_default_filter}
+
 BuildRequires: make
 BuildRequires: opt-qt5-qtbase-devel >= %{qt_version}
 BuildRequires: opt-qt5-qtbase-static
@@ -29,6 +31,9 @@ BuildRequires:  pkgconfig(wayland-egl)
 BuildRequires:  pkgconfig(egl)
 BuildRequires:  pkgconfig(glesv2)
 BuildRequires:  pkgconfig(libudev)
+
+Requires: opt-qt5-qtbase-gui >= %{qt_version}
+Requires: opt-qt5-qtdeclarative >= %{qt_version}
 
 %description
 %{summary}.
