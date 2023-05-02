@@ -1,8 +1,8 @@
-%global qt_version 5.15.8
+%global qt_version 5.15.9
 
 Summary: Qt5 - Wayland platform support and QtCompositor module
 Name: opt-qt5-qtwayland
-Version: 5.15.8
+Version: 5.15.9+kde55
 Release: 1%{?dist}
 
 License: LGPLv3
