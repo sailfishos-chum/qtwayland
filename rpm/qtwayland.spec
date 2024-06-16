@@ -55,7 +55,7 @@ Requires: opt-qt5-qtbase-devel%{?_isa}
 export QTDIR=%{_opt_qt5_prefix}
 touch .git
 
-%{opt_qmake_qt5}
+%{opt_qmake_qt5} DEFINES+=QT_EGL_NO_X11
 
 %make_build
 
